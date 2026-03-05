@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased;
+    background-image: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  }
+}
+
+@layer components {
+  .app-surface {
+    @apply bg-white/90 backdrop-blur border border-white/60 shadow-soft;
+  }
+}

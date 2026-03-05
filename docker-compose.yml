@@ -1,0 +1,14 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: vertex_agri_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: vertex
+      MYSQL_DATABASE: vertex_agri
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data_vertex_agri:/var/lib/mysql
+volumes:
+  mysql_data_vertex_agri:

@@ -1,29 +1,28 @@
 -- Company
 INSERT INTO companies (name, gstin, address, state, phone, email)
 VALUES ('Vertex Agri Trading', NULL, 'Bengaluru, Karnataka', 'Karnataka', '9999999999', 'admin@vertex.local')
-ON DUPLICATE KEY UPDATE
-  address=VALUES(address),
-  state=VALUES(state),
-  phone=VALUES(phone),
-  email=VALUES(email);
-
-SET @company_id := (SELECT id FROM companies WHERE name='Vertex Agri Trading' LIMIT 1);
+ON CONFLICT (name) DO UPDATE
+SET address = EXCLUDED.address,
+    state = EXCLUDED.state,
+    phone = EXCLUDED.phone,
+    email = EXCLUDED.email;
 
 -- Roles
 INSERT INTO roles (company_id, code, name) VALUES
-(@company_id,'ADMIN','Admin / Business Owner'),
-(@company_id,'PURCHASE','Purchase Department'),
-(@company_id,'WEIGHBRIDGE','Weighbridge / Yard'),
-(@company_id,'WAREHOUSE','Warehouse / Inventory'),
-(@company_id,'SALES','Sales Department'),
-(@company_id,'BROKER','Broker Management'),
-(@company_id,'ACCOUNTS','Accounts & Finance'),
-(@company_id,'TRANSPORT','Transport & Logistics'),
-(@company_id,'VIEWER','Viewer (Read-only)')
-ON DUPLICATE KEY UPDATE name=VALUES(name);
+((SELECT id FROM companies WHERE name = 'Vertex Agri Trading' LIMIT 1), 'ADMIN', 'Admin / Business Owner'),
+((SELECT id FROM companies WHERE name = 'Vertex Agri Trading' LIMIT 1), 'PURCHASE', 'Purchase Department'),
+((SELECT id FROM companies WHERE name = 'Vertex Agri Trading' LIMIT 1), 'WEIGHBRIDGE', 'Weighbridge / Yard'),
+((SELECT id FROM companies WHERE name = 'Vertex Agri Trading' LIMIT 1), 'WAREHOUSE', 'Warehouse / Inventory'),
+((SELECT id FROM companies WHERE name = 'Vertex Agri Trading' LIMIT 1), 'SALES', 'Sales Department'),
+((SELECT id FROM companies WHERE name = 'Vertex Agri Trading' LIMIT 1), 'BROKER', 'Broker Management'),
+((SELECT id FROM companies WHERE name = 'Vertex Agri Trading' LIMIT 1), 'ACCOUNTS', 'Accounts & Finance'),
+((SELECT id FROM companies WHERE name = 'Vertex Agri Trading' LIMIT 1), 'TRANSPORT', 'Transport & Logistics'),
+((SELECT id FROM companies WHERE name = 'Vertex Agri Trading' LIMIT 1), 'VIEWER', 'Viewer (Read-only)')
+ON CONFLICT (company_id, code) DO UPDATE
+SET name = EXCLUDED.name;
 
 -- Permissions (starter set)
-INSERT IGNORE INTO permissions (code, description) VALUES
+INSERT INTO permissions (code, description) VALUES
 ('masters.commodity.create','Create commodity'),
 ('masters.commodity.read','Read commodity'),
 ('masters.commodity.update','Update commodity'),
@@ -109,15 +108,23 @@ INSERT IGNORE INTO permissions (code, description) VALUES
 ('transport.dispatch.update','Update dispatch'),
 ('transport.dispatch.delete','Delete dispatch'),
 
-('reports.read','Read reports');
+('reports.read','Read reports')
+ON CONFLICT (code) DO NOTHING;
 
 -- Role permissions
-SET @admin_role_id := (SELECT id FROM roles WHERE company_id=@company_id AND code='ADMIN' LIMIT 1);
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT @admin_role_id, p.id FROM permissions p;
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.company_id = (SELECT id FROM companies WHERE name = 'Vertex Agri Trading' LIMIT 1)
+  AND r.code = 'ADMIN'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
 
-SET @viewer_role_id := (SELECT id FROM roles WHERE company_id=@company_id AND code='VIEWER' LIMIT 1);
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT @viewer_role_id, p.id
-FROM permissions p
-WHERE p.code LIKE '%.read' OR p.code='reports.read';
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON TRUE
+WHERE r.company_id = (SELECT id FROM companies WHERE name = 'Vertex Agri Trading' LIMIT 1)
+  AND r.code = 'VIEWER'
+  AND (p.code LIKE '%.read' OR p.code = 'reports.read')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
